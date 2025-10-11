@@ -1,0 +1,60 @@
+.top-button {
+  display: inline-block;
+  margin-bottom: 10px;
+  font-size: 115%;
+}
+.footer-margin {
+  margin-bottom: 70px;
+}
+
+.card-clickable {
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+.card-clickable:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+.verse-card {
+  border-left: 4px solid #0d6efd;
+}
+footer {
+  margin-top: 50px;
+}
+/* Fix navbar link visibility */
+.navbar-dark .navbar-nav .nav-link {
+  color: #ffffff !important;
+}
+.navbar-dark .navbar-nav .nav-link:hover,
+.navbar-dark .navbar-nav .nav-link:focus {
+  color: #f8f9fa !important;
+}
+
+/* Floating zoom controls */
+.zoom-controls {
+  position: fixed;
+  bottom: 70px;
+  right: 20px;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+  z-index: 999;
+}
+
+.zoom-btn {
+  background: #333;
+  color: white;
+  border: none;
+  border-radius: 50%;
+  width: 45px;
+  height: 45px;
+  font-size: 20px;
+  cursor: pointer;
+  box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.3);
+}
+#installAppBtn {
+  background-color: lightseagreen;
+}
+#installAppBtn:hover {
+  background-color: #36a420;
+}

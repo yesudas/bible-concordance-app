@@ -2,7 +2,8 @@
 // Bible Concordance Web Application
 include 'counter.php';
 
-$version = "2025.01";
+$version = "2025.03";
+
 
 // Get URL parameters
 $language = $_GET['lang'] ?? '';
@@ -205,7 +206,12 @@ function getVerses($language, $bible, $letter, $word) {
 }
 
 function buildUrl($params = []) {
-    $url = 'index.php';
+    // For home page, use clean URL
+    if (empty($params)) {
+        return './';
+    }
+    
+    $url = './';
     $queryParams = [];
     
     if (!empty($params['lang'])) $queryParams['lang'] = $params['lang'];
@@ -301,20 +307,27 @@ if ($language) {
     <title>Bible Concordance<?php echo $word ? " - $word" : ($letter ? " - Letter $letter" : ($bible ? " - $bible" : ($language ? " - $language" : ""))); ?></title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="manifest.json?v=<?php echo $version; ?>">
+    <meta name="theme-color" content="#2196f3">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-title" content="Bible Concordance">
 </head>
 <body>
     <!-- Header -->
     <header class="bg-primary text-white">
         <nav class="navbar navbar-expand-lg navbar-dark bg-primary">
             <div class="container">
-                <a class="navbar-brand fw-bold" href="index.php">Bible Concordance</a>
+                <a class="navbar-brand fw-bold" href="./">Bible Concordance</a>
                 <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                     <span class="navbar-toggler-icon"></span>
                 </button>
                 <div class="collapse navbar-collapse" id="navbarNav">
                     <ul class="navbar-nav ms-auto">
                         <li class="nav-item">
-                            <a class="nav-link" href="index.php">Home</a>
+                            <a class="nav-link" href="./">Home</a>
                         </li>
                     <li class="nav-item">
                             <a class="nav-link" href="https://wordofgod.in/good-news-collections/" target="_blank">Good News Collections</a> </li>
@@ -338,7 +351,7 @@ if ($language) {
         <?php if (!empty($breadcrumb)): ?>
         <nav aria-label="breadcrumb">
             <ol class="breadcrumb">
-                <li class="breadcrumb-item"><a href="index.php">Home</a></li>
+                <li class="breadcrumb-item"><a href="./">Home</a></li>
                 <?php foreach ($breadcrumb as $index => $crumb): ?>
                     <?php if ($crumb['url'] && $index < count($breadcrumb) - 1): ?>
                         <li class="breadcrumb-item"><a href="<?php echo htmlspecialchars($crumb['url']); ?>"><?php echo htmlspecialchars($crumb['text']); ?></a></li>
@@ -351,6 +364,28 @@ if ($language) {
         <?php endif; ?>
             <div class="row">
                 <div class="col-12">
+                    <?php 
+                    // Determine back URL based on current navigation level
+                    $backUrl = '';
+                    if ($word) {
+                        // From word view, go back to letter view
+                        $backUrl = buildUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letter]);
+                    } elseif ($letter) {
+                        // From letter view, go back to bible view
+                        $backUrl = buildUrl(['lang' => $language, 'bible' => $bible]);
+                    } elseif ($bible) {
+                        // From bible view, go back to language view
+                        $backUrl = buildUrl(['lang' => $language]);
+                    } elseif ($language) {
+                        // From language view, go back to home
+                        $backUrl = './';
+                    }
+                    ?>
+                    <?php if ($backUrl): ?>
+                        <button onclick="window.location.href='<?php echo htmlspecialchars($backUrl); ?>'" class="btn btn-secondary top-button me-2">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </button>
+                    <?php endif; ?>
                     <button id="installAppBtn" class="btn btn-primary top-button"> <i class="bi bi-phone"></i> Install as App</button>
                 </div>
             </div>
@@ -415,16 +450,29 @@ if ($language) {
                 <div class="col-12">
                     <h1 class="mb-4">Select a Letter</h1>
                     <div class="row">
-                        <?php foreach ($pageData['letters'] as $letterItem): ?>
-                        <div class="col-md-6 col-lg-3 mb-3">
-                            <div class="card card-clickable h-100" onclick="window.location.href='<?php echo buildUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letterItem['letter']]); ?>'">
-                                <div class="card-body text-center">
-                                    <h5 class="card-title"><?php echo htmlspecialchars($letterItem['letter']); ?></h5>
-                                    <p class="card-text text-muted"><?php echo number_format($letterItem['wordsCount']); ?> words</p>
-                                </div>
+                        <div class="col-md-8 col-lg-6">
+                            <!-- Search Box for Letters -->
+                            <div class="mb-3">
+                                <input type="text" id="letterSearch" class="form-control" placeholder="Type here to search letters..." 
+                                       oninput="if(typeof filterLetters === 'function') filterLetters();" 
+                                       onkeyup="if(typeof filterLetters === 'function') filterLetters();">>
+                                <small class="text-muted">Search by letter name</small>
+                            </div>
+                            
+                            <div class="list-group" id="lettersList">
+                                <?php foreach ($pageData['letters'] as $letterItem): ?>
+                                <a href="<?php echo buildUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letterItem['letter']]); ?>" 
+                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center letter-item"
+                                   data-letter="<?php echo strtolower(htmlspecialchars($letterItem['letter'])); ?>">
+                                    <span class="fw-bold text-primary">
+                                        <?php echo htmlspecialchars($letterItem['letter']); ?> 
+                                        <span class="text-muted fw-normal">(<?php echo number_format($letterItem['wordsCount']); ?> words)</span>
+                                    </span>
+                                    <i class="bi bi-chevron-right text-muted"></i>
+                                </a>
+                                <?php endforeach; ?>
                             </div>
                         </div>
-                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
@@ -435,16 +483,29 @@ if ($language) {
                 <div class="col-12">
                     <h1 class="mb-4">Words starting with "<?php echo htmlspecialchars($letter); ?>"</h1>
                     <div class="row">
-                        <?php foreach ($pageData['words'] as $wordItem): ?>
-                        <div class="col-md-6 col-lg-4 mb-3">
-                            <div class="card card-clickable h-100" onclick="window.location.href='<?php echo buildUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letter, 'word' => $wordItem['word']]); ?>'">
-                                <div class="card-body">
-                                    <h5 class="card-title"><?php echo htmlspecialchars($wordItem['word']); ?></h5>
-                                    <p class="card-text text-muted"><?php echo $wordItem['versesCount']; ?> verses</p>
-                                </div>
+                        <div class="col-md-10 col-lg-8">
+                            <!-- Search Box for Words -->
+                            <div class="mb-3">
+                                <input type="text" id="wordSearch" class="form-control" placeholder="Type here to search words..."
+                                       oninput="if(typeof filterWords === 'function') filterWords();" 
+                                       onkeyup="if(typeof filterWords === 'function') filterWords();">>
+                                <small class="text-muted">Search by word name</small>
+                            </div>
+                            
+                            <div class="list-group" id="wordsList">
+                                <?php foreach ($pageData['words'] as $wordItem): ?>
+                                <a href="<?php echo buildUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letter, 'word' => $wordItem['word']]); ?>" 
+                                   class="list-group-item list-group-item-action d-flex justify-content-between align-items-center word-item"
+                                   data-word="<?php echo strtolower(htmlspecialchars($wordItem['word'])); ?>">
+                                    <span class="fw-bold text-primary">
+                                        <?php echo htmlspecialchars($wordItem['word']); ?> 
+                                        <span class="text-muted fw-normal">(<?php echo $wordItem['versesCount']; ?> verses)</span>
+                                    </span>
+                                    <i class="bi bi-chevron-right text-muted"></i>
+                                </a>
+                                <?php endforeach; ?>
                             </div>
                         </div>
-                        <?php endforeach; ?>
                     </div>
                 </div>
             </div>
@@ -497,5 +558,6 @@ if ($language) {
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="js/script.js?v=<?php echo $version; ?>"></script>
 </body>
 </html>

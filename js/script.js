@@ -97,7 +97,76 @@ function showNoResultsMessage(type, visibleCount, filter) {
     }
 }
 
+// Zoom functionality
+let currentZoom = 16; // Default font size in px
+const minZoom = 12;
+const maxZoom = 40;
+const zoomStep = 2;
+
+function updateZoom(newSize) {
+    currentZoom = Math.max(minZoom, Math.min(maxZoom, newSize));
+    document.body.style.fontSize = currentZoom + 'px';
+    
+    // Save zoom level to localStorage
+    localStorage.setItem('bibleConcordanceZoom', currentZoom);
+    
+    // Update button states
+    updateZoomButtons();
+}
+
+function updateZoomButtons() {
+    const zoomInBtn = document.getElementById('zoomInBtn');
+    const zoomOutBtn = document.getElementById('zoomOutBtn');
+    
+    if (zoomInBtn) {
+        zoomInBtn.disabled = currentZoom >= maxZoom;
+        zoomInBtn.title = currentZoom >= maxZoom ? 'Maximum zoom reached' : 'Zoom In';
+    }
+    
+    if (zoomOutBtn) {
+        zoomOutBtn.disabled = currentZoom <= minZoom;
+        zoomOutBtn.title = currentZoom <= minZoom ? 'Minimum zoom reached' : 'Zoom Out';
+    }
+}
+
+function initializeZoom() {
+    // Load saved zoom level from localStorage
+    const savedZoom = localStorage.getItem('bibleConcordanceZoom');
+    if (savedZoom) {
+        currentZoom = parseInt(savedZoom);
+        updateZoom(currentZoom);
+    } else {
+        updateZoomButtons();
+    }
+}
+
 document.addEventListener("DOMContentLoaded", () => {
+  // Initialize zoom functionality
+  initializeZoom();
+  
+  // Zoom control event listeners
+  const zoomInBtn = document.getElementById('zoomInBtn');
+  const zoomOutBtn = document.getElementById('zoomOutBtn');
+  const zoomResetBtn = document.getElementById('zoomResetBtn');
+  
+  if (zoomInBtn) {
+    zoomInBtn.addEventListener('click', () => {
+      updateZoom(currentZoom + zoomStep);
+    });
+  }
+  
+  if (zoomOutBtn) {
+    zoomOutBtn.addEventListener('click', () => {
+      updateZoom(currentZoom - zoomStep);
+    });
+  }
+  
+  if (zoomResetBtn) {
+    zoomResetBtn.addEventListener('click', () => {
+      updateZoom(16); // Reset to default 16px
+    });
+  }
+
   // Add event listeners for search inputs
   const letterSearch = document.getElementById('letterSearch');
   const wordSearch = document.getElementById('wordSearch');

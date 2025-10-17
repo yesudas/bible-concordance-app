@@ -448,7 +448,20 @@ if ($language) {
                             <i class="bi bi-arrow-left"></i> Back
                         </button>
                     <?php endif; ?>
-                    <button id="installAppBtn" class="btn btn-primary top-button"> <i class="bi bi-phone"></i> Install as App</button>
+                    <button id="installAppBtn" class="btn btn-primary top-button me-2"> <i class="bi bi-phone"></i> Install as App</button>
+                    
+                    <!-- Zoom Controls -->
+                    <div class="btn-group top-button" role="group" aria-label="Zoom controls">
+                        <button type="button" id="zoomOutBtn" class="btn btn-outline-secondary" title="Zoom Out">
+                            <i class="bi bi-zoom-out"></i>
+                        </button>
+                        <button type="button" id="zoomResetBtn" class="btn btn-outline-secondary" title="Reset Zoom">
+                            <i class="bi bi-arrow-counterclockwise"></i>
+                        </button>
+                        <button type="button" id="zoomInBtn" class="btn btn-outline-secondary" title="Zoom In">
+                            <i class="bi bi-zoom-in"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
 

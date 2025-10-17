@@ -136,3 +136,39 @@ footer {
 #installAppBtn:hover {
   background-color: #36a420;
 }
+
+/* Zoom Controls Styling */
+.btn-group .btn {
+  border-radius: 0;
+  border-right: 1px solid #dee2e6;
+}
+
+.btn-group .btn:first-child {
+  border-top-left-radius: 0.375rem;
+  border-bottom-left-radius: 0.375rem;
+}
+
+.btn-group .btn:last-child {
+  border-top-right-radius: 0.375rem;
+  border-bottom-right-radius: 0.375rem;
+  border-right: 1px solid #6c757d;
+}
+
+.btn-group .btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Responsive zoom controls */
+@media (max-width: 576px) {
+  .btn-group.top-button {
+    display: flex;
+    margin-top: 10px;
+    width: 100%;
+  }
+  
+  .btn-group.top-button .btn {
+    flex: 1;
+    font-size: 0.875rem;
+  }
+}

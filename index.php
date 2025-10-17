@@ -18,7 +18,7 @@ function getLanguages() {
     if (is_dir($dataDir)) {
         $dirs = scandir($dataDir);
         foreach ($dirs as $dir) {
-            if ($dir !== '.' && $dir !== '..' && is_dir($dataDir . '/' . $dir)) {
+            if ($dir !== '.' && $dir !== '..' && is_dir($dataDir . '/' . $dir) && !str_starts_with($dir, 'HIDE-')) {
                 $languages[] = $dir;
             }
         }
@@ -32,7 +32,7 @@ function getLanguagesWithBibleCount() {
     if (is_dir($dataDir)) {
         $dirs = scandir($dataDir);
         foreach ($dirs as $dir) {
-            if ($dir !== '.' && $dir !== '..' && is_dir($dataDir . '/' . $dir)) {
+            if ($dir !== '.' && $dir !== '..' && is_dir($dataDir . '/' . $dir) && !str_starts_with($dir, 'HIDE-')) {
                 $bibleCount = count(getBibles($dir));
                 $languagesWithCount[] = [
                     'name' => $dir,
@@ -50,7 +50,7 @@ function getBibles($language) {
     if (is_dir($langDir)) {
         $dirs = scandir($langDir);
         foreach ($dirs as $dir) {
-            if ($dir !== '.' && $dir !== '..' && is_dir($langDir . '/' . $dir)) {
+            if ($dir !== '.' && $dir !== '..' && is_dir($langDir . '/' . $dir) && !str_starts_with($dir, 'HIDE-')) {
                 $concordanceFile = $langDir . '/' . $dir . '/Concordance.json';
                 if (file_exists($concordanceFile)) {
                     $concordanceData = json_decode(file_get_contents($concordanceFile), true);
@@ -185,14 +185,22 @@ function getVerses($language, $bible, $letter, $word) {
             
             if ($exactFileName) {
                 // Use the exact filename from the data
-                $wordFilePath = __DIR__ . '/data/' . $language . '/' . $bible . '/words/' . strtolower($letter) . '/' . $exactFileName;
+                // Try original case first, then lowercase, then uppercase
+                $possibleWordPaths = [
+                    __DIR__ . '/data/' . $language . '/' . $bible . '/words/' . $letter . '/' . $exactFileName,
+                    __DIR__ . '/data/' . $language . '/' . $bible . '/words/' . strtolower($letter) . '/' . $exactFileName,
+                    __DIR__ . '/data/' . $language . '/' . $bible . '/words/' . strtoupper($letter) . '/' . $exactFileName
+                ];
                 
-                // Try both lowercase and uppercase letter directory
-                if (!file_exists($wordFilePath)) {
-                    $wordFilePath = __DIR__ . '/data/' . $language . '/' . $bible . '/words/' . strtoupper($letter) . '/' . $exactFileName;
+                $wordFilePath = '';
+                foreach ($possibleWordPaths as $path) {
+                    if (file_exists($path)) {
+                        $wordFilePath = $path;
+                        break;
+                    }
                 }
                 
-                if (file_exists($wordFilePath)) {
+                if ($wordFilePath && file_exists($wordFilePath)) {
                     $wordData = json_decode(file_get_contents($wordFilePath), true);
                     if (isset($wordData['verses'])) {
                         $verses = $wordData['verses'];
@@ -232,14 +240,25 @@ function highlightWord($text, $word) {
     // Escape the word for regex and make it case-insensitive
     $escapedWord = preg_quote($word, '/');
     
-    // For Tamil text, we need to handle Unicode properly
-    // Tamil doesn't use traditional word boundaries, so we'll use a more flexible approach
-    // Match the word with optional 's' suffix for English and handle Tamil characters
-    if (preg_match('/[\x{0B80}-\x{0BFF}]/u', $word)) {
-        // Tamil Unicode range - use simple text matching without word boundaries
+    // Check for various scripts that don't use traditional word boundaries
+    // Tamil: U+0B80-U+0BFF
+    // Malayalam: U+0D00-U+0D7F
+    // Devanagari (Hindi): U+0900-U+097F
+    // Telugu: U+0C00-U+0C7F
+    // Kannada: U+0C80-U+0CFF
+    // Bengali: U+0980-U+09FF
+    // Gujarati: U+0A80-U+0AFF
+    // Odia: U+0B00-U+0B7F
+    // Punjabi (Gurmukhi): U+0A00-U+0A7F
+    // Sinhala: U+0D80-U+0DFF
+    // Hebrew: U+0590-U+05FF (including Hebrew and Hebrew Extended blocks)
+    // Greek: U+0370-U+03FF (including Greek and Coptic blocks)
+    // Arabic: U+0600-U+06FF (Arabic block)
+    if (preg_match('/[\x{0370}-\x{03FF}\x{0590}-\x{05FF}\x{0600}-\x{06FF}\x{0900}-\x{097F}\x{0980}-\x{09FF}\x{0A00}-\x{0A7F}\x{0A80}-\x{0AFF}\x{0B00}-\x{0B7F}\x{0B80}-\x{0BFF}\x{0C00}-\x{0C7F}\x{0C80}-\x{0CFF}\x{0D00}-\x{0D7F}\x{0D80}-\x{0DFF}]/u', $word)) {
+        // Non-Latin scripts - use simple text matching without word boundaries
         $pattern = '/(' . $escapedWord . ')/ui';
     } else {
-        // English text - use word boundaries with optional 's'
+        // Latin/English text - use word boundaries with optional 's'
         $pattern = '/\b(' . $escapedWord . 's?)\b/i';
     }
     
@@ -248,6 +267,40 @@ function highlightWord($text, $word) {
     $highlightedText = preg_replace($pattern, '<span style="color: deeppink; font-weight: bold;">$1</span>', $escapedText);
     
     return $highlightedText;
+}
+
+function styleStrongNumbers($text) {
+    // Style Strong's numbers (H123, G123 format) with blueviolet color and pointer cursor
+    // This function is designed to work with already highlighted text
+    
+    // First, handle Strong's numbers that are outside any existing spans
+    // Simple pattern to match Strong's numbers not already styled
+    $pattern = '/\b([HG]\d+)\b/';
+    $styledText = preg_replace($pattern, '<span style="color: blueviolet; font-size: 70%;">$1</span>', $text);
+    
+    // Then, handle Strong's numbers that might be inside highlighted word spans
+    // We need to preserve the highlighting while adding Strong's number styling
+    $styledText = preg_replace_callback(
+        '/<span style="color: deeppink; font-weight: bold;">([^<]*?)<span style="color: blueviolet; font-size: 70%;">([HG]\d+)<\/span>([^<]*?)<\/span>/',
+        function($matches) {
+            $beforeStrong = $matches[1];
+            $strongNumber = $matches[2];
+            $afterStrong = $matches[3];
+            
+            // If the entire content is just the Strong's number, keep highlighting dominant
+            if (empty(trim($beforeStrong)) && empty(trim($afterStrong))) {
+                return '<span style="color: deeppink; font-weight: bold;">' . $strongNumber . '</span>';
+            } else {
+                // Mixed content: preserve word highlighting and add Strong's styling to the number only
+                return '<span style="color: deeppink; font-weight: bold;">' . $beforeStrong . 
+                       '<span style="color: blueviolet; font-size: 70%;">' . $strongNumber . '</span>' . 
+                       $afterStrong . '</span>';
+            }
+        },
+        $styledText
+    );
+    
+    return $styledText;
 }
 
 function formatIndianNumber($number) {
@@ -314,6 +367,15 @@ if ($language) {
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <meta name="apple-mobile-web-app-title" content="Bible Concordance">
+
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-8ZYHRZG9B8"></script>
+    <script>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-8ZYHRZG9B8');
+    </script>
+    
 </head>
 <body>
     <!-- Header -->
@@ -330,15 +392,15 @@ if ($language) {
                             <a class="nav-link" href="./">Home</a>
                         </li>
                     <li class="nav-item">
-                            <a class="nav-link" href="https://wordofgod.in/good-news-collections/" target="_blank">Good News Collections</a> </li>
+                            <a class="nav-link" href="https://wordofgod.in/good-news-collections/" target="_blank"><i class="bi bi-box-seam me-1"></i>Good News Collections</a> </li>
                     <li class="nav-item">
-                            <a class="nav-link" href="https://wordofgod.in/bibledictionary/" target="_blank">Bible Dictionaries</a> </li>
+                            <a class="nav-link" href="https://wordofgod.in/bibledictionary/" target="_blank"><i class="bi bi-collection me-1"></i>Bible Dictionaries</a> </li>
                     <li class="nav-item">
-                            <a class="nav-link" href="https://wordofgod.in/bible-wallpapers/" target="_blank">Bible Wallpapers</a></li>
+                            <a class="nav-link" href="https://wordofgod.in/bible-wallpapers/" target="_blank"><i class="bi bi-card-image me-1"></i>Bible Wallpapers</a></li>
                     <li class="nav-item">
-                            <a class="nav-link" href="https://wordofgod.in/bible-app-modules/" target="_blank">Bible App Modules</a></li>
+                            <a class="nav-link" href="https://wordofgod.in/bible-app-modules/" target="_blank"><i class="bi bi-phone me-1"></i>Bible App Modules</a></li>
                     <li class="nav-item">
-                            <a class="nav-link" href="https://wordofgod.in/" target="_blank">Free Christian Resources</a></li>
+                            <a class="nav-link" href="https://wordofgod.in/" target="_blank"><i class="bi bi-gift me-1"></i>Free Christian Resources</a></li>
                     </ul>
                 </div>
             </div>
@@ -465,8 +527,8 @@ if ($language) {
                                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center letter-item"
                                    data-letter="<?php echo strtolower(htmlspecialchars($letterItem['letter'])); ?>">
                                     <span class="fw-bold text-primary">
-                                        <?php echo htmlspecialchars($letterItem['letter']); ?> 
-                                        <span class="text-muted fw-normal">(<?php echo number_format($letterItem['wordsCount']); ?> words)</span>
+                                        <?php echo htmlspecialchars($language === 'English' ? ucfirst($letterItem['letter']) : $letterItem['letter']); ?> 
+                                        <span class="text-muted fw-normal">(<?php echo number_format($letterItem['wordsCount']); ?> verses)</span>
                                     </span>
                                     <i class="bi bi-chevron-right text-muted"></i>
                                 </a>
@@ -498,7 +560,7 @@ if ($language) {
                                    class="list-group-item list-group-item-action d-flex justify-content-between align-items-center word-item"
                                    data-word="<?php echo strtolower(htmlspecialchars($wordItem['word'])); ?>">
                                     <span class="fw-bold text-primary">
-                                        <?php echo htmlspecialchars($wordItem['word']); ?> 
+                                        <?php echo htmlspecialchars($language === 'English' ? ucfirst($wordItem['word']) : $wordItem['word']); ?> 
                                         <span class="text-muted fw-normal">(<?php echo $wordItem['versesCount']; ?> verses)</span>
                                     </span>
                                     <i class="bi bi-chevron-right text-muted"></i>
@@ -522,7 +584,7 @@ if ($language) {
                                     <?php foreach ($pageData['verses'] as $index => $verseItem): ?>
                                     <li class="mb-2">
                                         <span class="fw-bold text-primary"><?php echo $index + 1; ?>.</span> 
-                                        <?php echo highlightWord($verseItem['verse'], $word); ?>
+                                        <?php echo styleStrongNumbers(highlightWord($verseItem['verse'], $word)); ?>
                                         <?php if (isset($verseItem['reference']) && !empty($verseItem['reference'])): ?>
                                             - <span class="text-primary fw-bold"><?php echo htmlspecialchars($verseItem['reference']); ?></span>
                                         <?php endif; ?>
@@ -547,12 +609,12 @@ if ($language) {
         <div class="container">
             <p class="mb-0 text-muted">No Copyright, Freely Copy and Distribute (as per Matthew 10:8)</p>
             <p class="mb-0 text-muted">
-                <a href="https://wordofgod.in/good-news-collections/" target="_blank" class="text-decoration-none">Good News Collections</a> | 
-                <a href="https://wordofgod.in/bibledictionary/" target="_blank" class="text-decoration-none">Bible Dictionaries</a> | 
-                <a href="https://wordofgod.in/bible-wallpapers/" target="_blank" class="text-decoration-none">Bible Wallpapers</a> | 
-                <a href="https://wordofgod.in/bible-app-modules/" target="_blank" class="text-decoration-none">Bible App Modules</a> | 
-                <a href="https://wordofgod.in" target="_blank" class="text-decoration-none">Free Christian Resources</a> | 
-                Visitors: <?= $visitors2 ?>
+                <a href="https://wordofgod.in/good-news-collections/" target="_blank" class="text-decoration-none"><i class="bi bi-box-seam me-1"></i>Good News Collections</a> | 
+                <a href="https://wordofgod.in/bibledictionary/" target="_blank" class="text-decoration-none"><i class="bi bi-collection me-1"></i>Bible Dictionaries</a> | 
+                <a href="https://wordofgod.in/bible-wallpapers/" target="_blank" class="text-decoration-none"><i class="bi bi-card-image me-1"></i>Bible Wallpapers</a> | 
+                <a href="https://wordofgod.in/bible-app-modules/" target="_blank" class="text-decoration-none"><i class="bi bi-phone me-1"></i>Bible App Modules</a> | 
+                <a href="https://wordofgod.in" target="_blank" class="text-decoration-none"><i class="bi bi-gift me-1"></i>Free Christian Resources</a> | 
+                <span class="text-primary"><i class="bi bi-emoji-heart-eyes me-1"></i>Visitors: <?= $visitors2 ?></span>
             </p>
         </div>
     </footer>

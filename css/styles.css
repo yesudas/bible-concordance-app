@@ -172,3 +172,27 @@ footer {
     font-size: 0.875rem;
   }
 }
+
+/* Footer Contact Section Styling */
+footer .contact-section {
+  border-top: 1px solid #dee2e6;
+  padding-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+footer a:hover {
+  transform: translateY(-1px);
+  transition: transform 0.2s ease;
+}
+
+footer .text-success:hover {
+  color: #198754 !important;
+}
+
+footer .text-primary:hover {
+  color: #0d6efd !important;
+}
+
+footer .text-muted:hover {
+  color: #495057 !important;
+}

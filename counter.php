@@ -32,9 +32,16 @@ if (!$isBot) {
     // Open file for reading and writing
     $fp = fopen($counterFile, "c+"); // c+ = read/write, create if not exists
 
-    if (flock($fp, LOCK_EX)) { // lock file exclusively
-        // Read current count
-        $count = (int)fread($fp, filesize($counterFile));
+    if ($fp && flock($fp, LOCK_EX)) { // lock file exclusively
+        // Read current count - read entire file content
+        rewind($fp); // Make sure we're at the beginning
+        $currentContent = fread($fp, 1024); // Read up to 1024 bytes (more than enough for a counter)
+        $count = (int)trim($currentContent); // Convert to integer and trim whitespace
+        
+        // If file was empty or invalid, start from 0
+        if ($count < 0) {
+            $count = 0;
+        }
     
         // Increment
         $count++;
@@ -48,12 +55,19 @@ if (!$isBot) {
     
         fflush($fp);        // flush output
         flock($fp, LOCK_UN); // unlock
+        fclose($fp);
     } else {
-        // Could not lock file (very rare)
-        $count = -1;
+        // Could not open or lock file - fallback to reading existing value
+        if (file_exists($counterFile)) {
+            $visitors2 = (int)trim(file_get_contents($counterFile));
+        } else {
+            $visitors2 = 1; // Default fallback
+        }
+        
+        if ($fp) {
+            fclose($fp);
+        }
     }
-
-    fclose($fp);
 
 }
 

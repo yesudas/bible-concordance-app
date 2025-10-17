@@ -620,15 +620,40 @@ if ($language) {
     <!-- Footer -->
     <footer class="bg-light text-center py-4 mt-5">
         <div class="container">
-            <p class="mb-0 text-muted">No Copyright, Freely Copy and Distribute (as per Matthew 10:8)</p>
-            <p class="mb-0 text-muted">
+            <!-- Contact Section -->
+            <div class="row mb-3">
+                <div class="col-12">
+                    <h6 class="text-primary mb-2"><i class="bi bi-envelope-heart me-1"></i>Contact Us</h6>
+                    <p class="mb-1 text-muted">
+                        <a href="mailto:wordofgod@wordofgod.in" class="text-decoration-none text-muted">
+                            <i class="bi bi-envelope me-1"></i>wordofgod@wordofgod.in
+                        </a>
+                    </p>
+                    <p class="mb-1 text-muted">
+                        <span href="https://wa.me/917676505599" target="_blank" class="text-decoration-none text-success">
+                            <i class="bi bi-whatsapp me-1"></i>+91 7676505599
+                        </span>
+                    </p>
+                    <p class="mb-2 text-muted">
+                        <a href="https://www.wordofgod.in" target="_blank" class="text-decoration-none text-primary">
+                            <i class="bi bi-globe me-1"></i>www.WordOfGod.in
+                        </a>
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Resources Links -->
+            <p class="mb-2 text-muted">
                 <a href="https://wordofgod.in/good-news-collections/" target="_blank" class="text-decoration-none"><i class="bi bi-box-seam me-1"></i>Good News Collections</a> | 
                 <a href="https://wordofgod.in/bibledictionary/" target="_blank" class="text-decoration-none"><i class="bi bi-collection me-1"></i>Bible Dictionaries</a> | 
                 <a href="https://wordofgod.in/bible-wallpapers/" target="_blank" class="text-decoration-none"><i class="bi bi-card-image me-1"></i>Bible Wallpapers</a> | 
                 <a href="https://wordofgod.in/bible-app-modules/" target="_blank" class="text-decoration-none"><i class="bi bi-phone me-1"></i>Bible App Modules</a> | 
-                <a href="https://wordofgod.in" target="_blank" class="text-decoration-none"><i class="bi bi-gift me-1"></i>Free Christian Resources</a> | 
+                <a href="https://wordofgod.in/" target="_blank" class="text-decoration-none"><i class="bi bi-gift me-1"></i>Free Christian Resources</a> | 
                 <span class="text-primary"><i class="bi bi-emoji-heart-eyes me-1"></i>Visitors: <?= $visitors2 ?></span>
             </p>
+            
+            <!-- Copyright -->
+            <p class="mb-0 text-muted">No Copyright, Freely Copy and Distribute (as per Matthew 10:8)</p>
         </div>
     </footer>
 

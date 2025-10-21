@@ -37,6 +37,40 @@ function filterLetters() {
     showNoResultsMessage('letters', visibleCount, filter);
 }
 
+// Search functionality for Bibles View
+function filterBibles() {
+    const searchInput = document.getElementById('bibleSearch');
+    if (!searchInput) return;
+    
+    const filter = searchInput.value.toLowerCase().trim();
+    const bibleItems = document.querySelectorAll('.bible-item');
+    
+    let visibleCount = 0;
+    bibleItems.forEach(item => {
+        const bibleName = (item.getAttribute('data-bible-name') || '').toLowerCase();
+        const bibleId = (item.getAttribute('data-bible-id') || '').toLowerCase();
+        const itemText = item.textContent.toLowerCase();
+        
+        if (filter === '' || bibleName.includes(filter) || bibleId.includes(filter) || itemText.includes(filter)) {
+            // Show the item using multiple approaches
+            item.style.setProperty('display', 'block', 'important');
+            item.classList.remove('d-none', 'visually-hidden');
+            item.classList.add('d-block');
+            item.hidden = false;
+            visibleCount++;
+        } else {
+            // Hide the item using multiple approaches
+            item.style.setProperty('display', 'none', 'important');
+            item.classList.add('d-none', 'visually-hidden');
+            item.classList.remove('d-block');
+            item.hidden = true;
+        }
+    });
+    
+    // Show "No results" message if no items are visible
+    showNoResultsMessage('bibles', visibleCount, filter);
+}
+
 // Search functionality for Words View
 function filterWords() {
     const searchInput = document.getElementById('wordSearch');
@@ -72,10 +106,20 @@ function filterWords() {
 
 // Helper function to show/hide no results message
 function showNoResultsMessage(type, visibleCount, filter) {
-    const listId = type === 'letters' ? 'lettersList' : 'wordsList';
-    const msgId = type + 'NoResults';
-    const itemType = type === 'letters' ? 'letters' : 'words';
+    let listId, itemType;
     
+    if (type === 'letters') {
+        listId = 'lettersList';
+        itemType = 'letters';
+    } else if (type === 'words') {
+        listId = 'wordsList';
+        itemType = 'words';
+    } else if (type === 'bibles') {
+        listId = 'biblesList';
+        itemType = 'Bibles';
+    }
+    
+    const msgId = type + 'NoResults';
     const list = document.getElementById(listId);
     if (!list) return;
     
@@ -112,6 +156,9 @@ function updateZoom(newSize) {
     
     // Update button states
     updateZoomButtons();
+    
+    // Debug log for mobile troubleshooting
+    console.log('Zoom updated to:', currentZoom + 'px');
 }
 
 function updateZoomButtons() {
@@ -149,27 +196,57 @@ document.addEventListener("DOMContentLoaded", () => {
   const zoomOutBtn = document.getElementById('zoomOutBtn');
   const zoomResetBtn = document.getElementById('zoomResetBtn');
   
+  // Debug: Log if zoom buttons are found
+  console.log('Zoom buttons found:', {
+    zoomInBtn: !!zoomInBtn,
+    zoomOutBtn: !!zoomOutBtn,
+    zoomResetBtn: !!zoomResetBtn
+  });
+  
+  // Helper function to handle zoom button events
+  function handleZoomAction(action, actionName) {
+    return (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      console.log(`${actionName} triggered`);
+      action();
+    };
+  }
+  
   if (zoomInBtn) {
-    zoomInBtn.addEventListener('click', () => {
-      updateZoom(currentZoom + zoomStep);
+    // Add multiple event types for better mobile support
+    ['click', 'touchstart'].forEach(eventType => {
+      zoomInBtn.addEventListener(eventType, handleZoomAction(() => {
+        updateZoom(currentZoom + zoomStep);
+      }, 'Zoom In'), { passive: false });
     });
   }
   
   if (zoomOutBtn) {
-    zoomOutBtn.addEventListener('click', () => {
-      updateZoom(currentZoom - zoomStep);
+    ['click', 'touchstart'].forEach(eventType => {
+      zoomOutBtn.addEventListener(eventType, handleZoomAction(() => {
+        updateZoom(currentZoom - zoomStep);
+      }, 'Zoom Out'), { passive: false });
     });
   }
   
   if (zoomResetBtn) {
-    zoomResetBtn.addEventListener('click', () => {
-      updateZoom(16); // Reset to default 16px
+    ['click', 'touchstart'].forEach(eventType => {
+      zoomResetBtn.addEventListener(eventType, handleZoomAction(() => {
+        updateZoom(16); // Reset to default 16px
+      }, 'Zoom Reset'), { passive: false });
     });
   }
 
   // Add event listeners for search inputs
+  const bibleSearch = document.getElementById('bibleSearch');
   const letterSearch = document.getElementById('letterSearch');
   const wordSearch = document.getElementById('wordSearch');
+  
+  if (bibleSearch) {
+    bibleSearch.addEventListener('input', filterBibles);
+    bibleSearch.addEventListener('keyup', filterBibles);
+  }
   
   if (letterSearch) {
     letterSearch.addEventListener('input', filterLetters);
@@ -230,4 +307,174 @@ document.addEventListener("DOMContentLoaded", () => {
       }
     });
   }
+
+  // Copy verses button functionality
+  const copyVersesBtn = document.getElementById('copyVersesBtn');
+  if (copyVersesBtn) {
+    copyVersesBtn.addEventListener('click', copyVersesToClipboard);
+  }
 });
+
+// Copyright modal functionality
+function showCopyright(language, bible) {
+    const modal = new bootstrap.Modal(document.getElementById('copyrightModal'));
+    const contentDiv = document.getElementById('copyrightContent');
+    
+    // Show loading spinner
+    contentDiv.innerHTML = `
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status">
+                <span class="visually-hidden">Loading...</span>
+            </div>
+            <p class="mt-2 text-muted">Loading copyright information...</p>
+        </div>
+    `;
+    
+    modal.show();
+    
+    // Fetch copyright data
+    fetch(`copyright/${language}/${bible}.json`)
+        .then(response => response.json())
+        .then(data => {
+            let content = `
+                <div class="text-center mb-4">
+                    <h4 class="text-primary fw-bold">${data.bibleName}</h4>
+                    <p class="text-muted mb-0">Language: <strong>${data.language}</strong></p>
+                </div>
+            `;
+            
+            if (data.copyright && Array.isArray(data.copyright)) {
+                data.copyright.forEach((item, index) => {
+                    content += `<p class="mb-3">${item.paragraph}</p>`;
+                });
+            } else {
+                content += '<p class="text-muted">No copyright information available.</p>';
+            }
+            
+            contentDiv.innerHTML = content;
+        })
+        .catch(error => {
+            console.error('Error fetching copyright:', error);
+            contentDiv.innerHTML = `
+                <div class="alert alert-danger">
+                    <h5 class="alert-heading"><i class="bi bi-exclamation-triangle me-2"></i>Error</h5>
+                    <p class="mb-0">Could not load copyright information. Please try again later.</p>
+                </div>
+            `;
+        });
+}
+
+// Copy verses to clipboard functionality
+function copyVersesToClipboard() {
+    const versesList = document.getElementById('versesList');
+    if (!versesList) return;
+    
+    // Get current word and Bible version from page
+    const urlParams = new URLSearchParams(window.location.search);
+    const currentWord = urlParams.get('word') || '';
+    const currentBible = urlParams.get('bible') || '';
+    
+    // Start with header
+    let versesText = `Verses for "${currentWord}" from ${currentBible} bible\n\n`;
+    
+    const listItems = versesList.querySelectorAll('li');
+    
+    listItems.forEach((item, index) => {
+        // Extract text content, removing HTML tags but preserving structure
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = item.innerHTML;
+        
+        // Remove the numbering span at the beginning
+        const numberSpan = tempDiv.querySelector('.fw-bold.text-primary');
+        if (numberSpan) {
+            numberSpan.remove();
+        }
+        
+        // Get the verse text and reference separately
+        let verseText = '';
+        let reference = '';
+        
+        // Look for reference span (it should be the last fw-bold text-primary span)
+        const referenceSpans = tempDiv.querySelectorAll('.text-primary.fw-bold');
+        if (referenceSpans.length > 0) {
+            const referenceSpan = referenceSpans[referenceSpans.length - 1];
+            reference = referenceSpan.textContent.trim();
+            referenceSpan.remove();
+        }
+        
+        // Get the remaining text (verse content) and clean up whitespace
+        verseText = tempDiv.textContent.trim();
+        
+        // Remove leading dash if present
+        if (verseText.startsWith('- ')) {
+            verseText = verseText.substring(2).trim();
+        }
+        
+        // Clean up excessive whitespace - replace multiple spaces/tabs/newlines with single space
+        verseText = verseText.replace(/\s+/g, ' ').trim();
+        
+        // Format: "verse text (reference)"
+        let formattedVerse = `${index + 1}. ${verseText}`;
+        if (reference) {
+            formattedVerse += ` (${reference})`;
+        }
+        
+        versesText += `${formattedVerse}\n\n`;
+    });
+    
+    // Add website link at the end
+    versesText += `https://wordofgod.in/bible-concordance/`;
+    
+    // Copy to clipboard
+    if (navigator.clipboard && window.isSecureContext) {
+        // Modern clipboard API
+        navigator.clipboard.writeText(versesText).then(() => {
+            showCopyFeedback('success');
+        }).catch(err => {
+            console.error('Failed to copy verses: ', err);
+            showCopyFeedback('error');
+        });
+    } else {
+        // Fallback for older browsers
+        const textArea = document.createElement('textarea');
+        textArea.value = versesText;
+        textArea.style.position = 'fixed';
+        textArea.style.left = '-999999px';
+        textArea.style.top = '-999999px';
+        document.body.appendChild(textArea);
+        textArea.focus();
+        textArea.select();
+        
+        try {
+            document.execCommand('copy');
+            showCopyFeedback('success');
+        } catch (err) {
+            console.error('Failed to copy verses: ', err);
+            showCopyFeedback('error');
+        } finally {
+            textArea.remove();
+        }
+    }
+}
+
+// Show copy feedback to user
+function showCopyFeedback(type) {
+    const btn = document.getElementById('copyVersesBtn');
+    if (!btn) return;
+    
+    const originalContent = btn.innerHTML;
+    
+    if (type === 'success') {
+        btn.innerHTML = '<i class="bi bi-check-circle me-1"></i> Copied!';
+        btn.className = 'btn btn-success btn-sm';
+    } else {
+        btn.innerHTML = '<i class="bi bi-exclamation-circle me-1"></i> Copy Failed';
+        btn.className = 'btn btn-danger btn-sm';
+    }
+    
+    // Reset button after 2 seconds
+    setTimeout(() => {
+        btn.innerHTML = originalContent;
+        btn.className = 'btn btn-outline-primary btn-sm';
+    }, 2000);
+}

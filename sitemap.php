@@ -6,9 +6,30 @@ ini_set('memory_limit', '1G');
 ini_set('max_execution_time', 600); // 10 minutes
 error_reporting(E_ALL);
 
+// Detect if running in browser or CLI
+$isCli = (php_sapi_name() === 'cli');
+
+// Set content type for browser
+if (!$isCli) {
+    header('Content-Type: text/html; charset=utf-8');
+    echo '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Sitemap Generator</title>';
+    echo '<style>body{font-family:monospace;padding:20px;background:#f5f5f5;}pre{background:#fff;padding:15px;border:1px solid #ddd;border-radius:5px;}</style>';
+    echo '</head><body><pre>';
+}
+
 $baseUrl = 'https://www.wordofgod.in/bible-concordance/';
 $maxUrlsPerSitemap = 10000;
 $currentDate = date('Y-m-d');
+
+// Helper function to output text that works in both CLI and browser
+function output($text) {
+    global $isCli;
+    if ($isCli) {
+        echo $text;
+    } else {
+        echo htmlspecialchars($text);
+    }
+}
 
 // Clean up old sitemap files
 $oldSitemaps = glob('sitemap*.xml');
@@ -24,6 +45,10 @@ function getLanguages() {
         $dirs = scandir($dataDir);
         foreach ($dirs as $dir) {
             if ($dir !== '.' && $dir !== '..' && is_dir($dataDir . '/' . $dir)) {
+                // Skip folders starting with "HIDE-"
+                if (strpos($dir, 'HIDE-') === 0) {
+                    continue;
+                }
                 $languages[] = $dir;
             }
         }
@@ -38,6 +63,10 @@ function getBibles($language) {
         $dirs = scandir($langDir);
         foreach ($dirs as $dir) {
             if ($dir !== '.' && $dir !== '..' && is_dir($langDir . '/' . $dir)) {
+                // Skip folders starting with "HIDE-"
+                if (strpos($dir, 'HIDE-') === 0) {
+                    continue;
+                }
                 $concordanceFile = $langDir . '/' . $dir . '/Concordance.json';
                 if (file_exists($concordanceFile)) {
                     $bibles[] = $dir;
@@ -157,7 +186,7 @@ class SitemapGenerator {
         file_put_contents($filename, $xml);
         $this->sitemapFiles[] = $filename;
         
-        echo "Created {$filename} with " . count($this->currentUrls) . " URLs\n";
+        // echo "Created {$filename} with " . count($this->currentUrls) . " URLs\n";
         
         // Reset for next chunk
         $this->currentUrls = [];
@@ -198,25 +227,25 @@ class SitemapGenerator {
         $xml .= '</sitemapindex>';
         
         file_put_contents('sitemap.xml', $xml);
-        echo "Created master sitemap.xml\n";
+        output("Created master sitemap.xml\n");
     }
 }
 
 // Start generating sitemap
-echo "Starting sitemap generation...\n";
-echo "Base URL: {$baseUrl}\n";
-echo "Date: {$currentDate}\n\n";
+output("Starting sitemap generation...\n");
+output("Base URL: {$baseUrl}\n");
+output("Date: {$currentDate}\n\n");
 $startTime = microtime(true);
 
 $generator = new SitemapGenerator();
 
 // 1. Home page
 $generator->addUrl(buildSitemapUrl(), 'daily', '1.0');
-echo "Added home page URL\n";
+output("Added home page URL\n");
 
 // 2. Language pages
 $languages = getLanguages();
-echo "Found " . count($languages) . " languages\n";
+output("Found " . count($languages) . " languages\n");
 
 foreach ($languages as $language) {
     try {
@@ -225,7 +254,7 @@ foreach ($languages as $language) {
         
         // 3. Bible pages for this language
         $bibles = getBibles($language);
-        echo "Processing language '{$language}' with " . count($bibles) . " bibles\n";
+        output("Processing language '{$language}' with " . count($bibles) . " bibles\n");
         
         foreach ($bibles as $bible) {
             try {
@@ -234,7 +263,7 @@ foreach ($languages as $language) {
                 
                 // 4. Letter pages for this bible
                 $letters = getLetters($language, $bible);
-                echo "  Bible '{$bible}' has " . count($letters) . " letters\n";
+                // echo "  Bible '{$bible}' has " . count($letters) . " letters\n";
                 
                 foreach ($letters as $letter) {
                     try {
@@ -243,7 +272,7 @@ foreach ($languages as $language) {
                         
                         // 5. Word pages for this letter
                         $words = getWords($language, $bible, $letter);
-                        echo "    Letter '{$letter}' has " . count($words) . " words\n";
+                        // echo "    Letter '{$letter}' has " . count($words) . " words\n";
                         
                         foreach ($words as $word) {
                             // Word page (verses view)
@@ -251,22 +280,24 @@ foreach ($languages as $language) {
                         }
                         
                     } catch (Exception $e) {
-                        echo "    Error processing letter '{$letter}': " . $e->getMessage() . "\n";
+                        output("    Error processing letter '{$letter}': " . $e->getMessage() . "\n");
                     }
                 }
                 
             } catch (Exception $e) {
-                echo "  Error processing bible '{$bible}': " . $e->getMessage() . "\n";
+                output("  Error processing bible '{$bible}': " . $e->getMessage() . "\n");
             }
+            // Show progress and memory usage
+            output("Progress: Completed Bible '{$bible}'\n");
         }
         
     } catch (Exception $e) {
-        echo "Error processing language '{$language}': " . $e->getMessage() . "\n";
+        output("Error processing language '{$language}': " . $e->getMessage() . "\n");
     }
     
     // Show progress and memory usage
-    echo "Progress: Completed language '{$language}'\n";
-    echo "Memory usage: " . round(memory_get_usage(true) / 1024 / 1024, 2) . " MB\n\n";
+    output("Progress: Completed language '{$language}'\n");
+    output("Memory usage: " . round(memory_get_usage(true) / 1024 / 1024, 2) . " MB\n\n");
     
     // Flush output buffer
     if (ob_get_level()) {
@@ -281,31 +312,36 @@ $result = $generator->finalize();
 $endTime = microtime(true);
 $executionTime = round($endTime - $startTime, 2);
 
-echo "\n" . str_repeat("=", 60) . "\n";
-echo "SITEMAP GENERATION COMPLETED!\n";
-echo str_repeat("=", 60) . "\n";
-echo "Execution time: {$executionTime} seconds\n";
-echo "Peak memory usage: " . round(memory_get_peak_usage(true) / 1024 / 1024, 2) . " MB\n";
-echo "Total URLs generated: " . number_format($result['totalUrls']) . "\n";
-echo "Sitemap files created: " . count($result['sitemapFiles']) . "\n";
-echo "Max URLs per file: " . number_format($maxUrlsPerSitemap) . "\n";
+output("\n" . str_repeat("=", 60) . "\n");
+output("SITEMAP GENERATION COMPLETED!\n");
+output(str_repeat("=", 60) . "\n");
+output("Execution time: {$executionTime} seconds\n");
+output("Peak memory usage: " . round(memory_get_peak_usage(true) / 1024 / 1024, 2) . " MB\n");
+output("Total URLs generated: " . number_format($result['totalUrls']) . "\n");
+output("Sitemap files created: " . count($result['sitemapFiles']) . "\n");
+output("Max URLs per file: " . number_format($maxUrlsPerSitemap) . "\n");
 
-echo "\nFiles created:\n";
-echo "- sitemap.xml (master sitemap)\n";
+output("\nFiles created:\n");
+output("- sitemap.xml (master sitemap)\n");
 foreach ($result['sitemapFiles'] as $file) {
     $fileSize = round(filesize($file) / 1024, 2);
-    echo "- {$file} ({$fileSize} KB)\n";
+    output("- {$file} ({$fileSize} KB)\n");
 }
 
-echo "\nSitemap URLs:\n";
-echo "- Master sitemap: {$baseUrl}sitemap.xml\n";
+output("\nSitemap URLs:\n");
+output("- Master sitemap: {$baseUrl}sitemap.xml\n");
 foreach ($result['sitemapFiles'] as $file) {
-    echo "- {$baseUrl}{$file}\n";
+    output("- {$baseUrl}{$file}\n");
 }
 
-echo "\nTo submit to search engines:\n";
-echo "- Google: https://search.google.com/search-console\n";
-echo "- Bing: https://www.bing.com/webmasters\n";
-echo "- Submit this URL: {$baseUrl}sitemap.xml\n";
+output("\nTo submit to search engines:\n");
+output("- Google: https://search.google.com/search-console\n");
+output("- Bing: https://www.bing.com/webmasters\n");
+output("- Submit this URL: {$baseUrl}sitemap.xml\n");
+
+// Close HTML tags if running in browser
+if (!$isCli) {
+    echo '</pre></body></html>';
+}
 
 ?>

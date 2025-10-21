@@ -1,0 +1,11 @@
+# Log files
+*.log
+
+# Keep the directory but ignore log contents
+!.gitkeep
+
+.sync.ffs_db
+.DS_Store
+counter.txt
+**/.DS_Store
+**/counter.txt

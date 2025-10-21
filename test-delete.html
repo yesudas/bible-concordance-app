@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test Delete Function</title>
+</head>
+<body>
+    <h1>Delete Function Test</h1>
+    
+    <button class="delete-btn" data-entry-id="test123" data-word="testword">Test Delete</button>
+    
+    <form id="deleteForm" method="post" style="display: none;">
+        <input type="hidden" name="action" value="delete_entry">
+        <input type="hidden" name="delete_id" id="delete_id">
+    </form>
+
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        console.log('DOM loaded');
+        
+        // Handle individual delete buttons
+        document.querySelectorAll('.delete-btn').forEach(function(button) {
+            console.log('Found delete button:', button);
+            button.addEventListener('click', function() {
+                const entryId = this.dataset.entryId;
+                const word = this.dataset.word;
+                
+                console.log('Delete button clicked for ID:', entryId, 'word:', word);
+                alert('Delete clicked for ID: ' + entryId);
+                
+                if (confirm(`Are you sure you want to delete the log entry for word "${word}"?`)) {
+                    console.log('User confirmed delete');
+                    document.getElementById('delete_id').value = entryId;
+                    console.log('Set delete_id field to:', entryId);
+                    alert('Would submit form with ID: ' + entryId);
+                    // document.getElementById('deleteForm').submit();
+                }
+            });
+        });
+    });
+    </script>
+</body>
+</html>

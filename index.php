@@ -2,7 +2,7 @@
 // Bible Concordance Web Application
 include 'counter.php';
 
-$version = "2025.03";
+$version = "2025.08";
 
 
 // Get URL parameters
@@ -324,6 +324,40 @@ function formatIndianNumber($number) {
     return strrev($result);
 }
 
+// Log missing verses for analytics
+function logMissingVerse($language, $bible, $word, $letter) {
+    $logFile = __DIR__ . '/logs/missing_verses.log';
+    
+    // Create logs directory if it doesn't exist
+    $logDir = dirname($logFile);
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
+    
+    // Prepare log entry
+    $currentUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? "https" : "http") . 
+                  "://" . $_SERVER['HTTP_HOST'] . $_SERVER['REQUEST_URI'];
+    $timestamp = date('Y-m-d H:i:s');
+    $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? 'Unknown';
+    $ip = $_SERVER['REMOTE_ADDR'] ?? 'Unknown';
+    
+    $logEntry = [
+        'id' => uniqid('log_', true), // Unique identifier with timestamp precision
+        'timestamp' => $timestamp,
+        'language' => $language,
+        'bible' => $bible,
+        'word' => $word,
+        'letter' => $letter,
+        'url' => $currentUrl,
+        'ip' => $ip,
+        'user_agent' => $userAgent
+    ];
+    
+    // Convert to JSON and append to log file
+    $jsonEntry = json_encode($logEntry) . "\n";
+    file_put_contents($logFile, $jsonEntry, FILE_APPEND | LOCK_EX);
+}
+
 // Prepare page data
 $pageData = [
     'languages' => getLanguages(),
@@ -351,6 +385,7 @@ if ($language) {
     }
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -493,9 +528,22 @@ if ($language) {
             <div class="row">
                 <div class="col-12">
                     <h1 class="mb-4">Select a Bible - <?php echo htmlspecialchars($language); ?></h1>
-                    <div class="row">
+                    
+                    <!-- Search Box for Bibles -->
+                    <div class="row mb-3">
+                        <div class="col-md-8 col-lg-6">
+                            <input type="text" id="bibleSearch" class="form-control" placeholder="Type here to search Bibles..."
+                                   oninput="if(typeof filterBibles === 'function') filterBibles();" 
+                                   onkeyup="if(typeof filterBibles === 'function') filterBibles();">
+                            <small class="text-muted">Search by Bible name or abbreviation</small>
+                        </div>
+                    </div>
+                    
+                    <div class="row" id="biblesList">
                         <?php foreach ($pageData['bibles'] as $bibleItem): ?>
-                        <div class="col-md-6 col-lg-4 mb-3">
+                        <div class="col-md-6 col-lg-4 mb-3 bible-item" 
+                             data-bible-name="<?php echo strtolower(htmlspecialchars($bibleItem['name'])); ?>"
+                             data-bible-id="<?php echo strtolower(htmlspecialchars($bibleItem['id'])); ?>">
                             <div class="card card-clickable h-100" onclick="window.location.href='<?php echo buildUrl(['lang' => $language, 'bible' => $bibleItem['id']]); ?>'">
                                 <div class="card-body text-center">
                                     <h5 class="card-title"><?php echo htmlspecialchars($bibleItem['name']); ?></h5>
@@ -593,7 +641,15 @@ if ($language) {
                     <?php if (!empty($pageData['verses'])): ?>
                         <div class="card">
                             <div class="card-body">
-                                <ol class="list-unstyled mb-0">
+                                <!-- Copy to Clipboard Button -->
+                                <div class="text-center mb-3">
+                                    <button type="button" id="copyVersesBtn" class="btn btn-outline-primary btn-sm" title="Copy all verses to clipboard">
+                                        <i class="bi bi-clipboard me-1"></i> Copy Verses to Clipboard
+                                    </button>
+                                </div>
+                                <hr class="mb-3">
+                                
+                                <ol class="list-unstyled mb-0" id="versesList">
                                     <?php foreach ($pageData['verses'] as $index => $verseItem): ?>
                                     <li class="mb-2">
                                         <span class="fw-bold text-primary"><?php echo $index + 1; ?>.</span> 
@@ -607,6 +663,10 @@ if ($language) {
                             </div>
                         </div>
                     <?php else: ?>
+                        <?php
+                        // Log this missing verse case
+                        logMissingVerse($language, $bible, $word, $letter);
+                        ?>
                         <div class="alert alert-info">
                             <h4 class="alert-heading">No verses found</h4>
                             <p>There are no verses available for this word in the selected Bible.</p>
@@ -616,6 +676,28 @@ if ($language) {
             </div>
         <?php endif; ?>
     </main>
+
+    <?php
+    // Show copyright notice for Bible versions (Letters, Words, and Verses views)
+    if ($language && $bible && ($letter || $word) && false) {
+        $copyrightFile = "copyright/{$language}/{$bible}.json";
+        if (file_exists($copyrightFile)) {
+            // Read copyright JSON data
+            $copyrightData = json_decode(file_get_contents($copyrightFile), true);
+            $bibleName = $copyrightData['bibleName'] ?? $bible;
+            
+            echo '<div class="container mb-4">';
+            echo '<div class="alert alert-light border text-center">';
+            echo '<small class="text-muted">';
+            echo '<strong>' . htmlspecialchars($bibleName) . '</strong><br>';
+            echo 'This Bible version is used with appropriate permissions.<br>';
+            echo '<a href="#" onclick="showCopyright(\'' . htmlspecialchars($language) . '\', \'' . htmlspecialchars($bible) . '\')" class="text-primary text-decoration-none">View full copyright information</a>';
+            echo '</small>';
+            echo '</div>';
+            echo '</div>';
+        }
+    }
+    ?>
 
     <!-- Footer -->
     <footer class="bg-light text-center py-4 mt-5">
@@ -656,6 +738,31 @@ if ($language) {
             <p class="mb-0 text-muted">No Copyright, Freely Copy and Distribute (as per Matthew 10:8)</p>
         </div>
     </footer>
+
+    <!-- Copyright Modal -->
+    <div class="modal fade" id="copyrightModal" tabindex="-1" aria-labelledby="copyrightModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg modal-dialog-scrollable">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="copyrightModalLabel">
+                        <i class="bi bi-shield-check me-2"></i>Copyright Information
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body" id="copyrightContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2 text-muted">Loading copyright information...</p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script src="js/script.js?v=<?php echo $version; ?>"></script>

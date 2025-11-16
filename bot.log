@@ -1,0 +1,4 @@
+# Bot Activity Log
+# Format: [Timestamp] ID: unique_hash | IP: ip_address | User-Agent: user_agent | Referer: referer
+# This file logs bot activity detected via the honeypot trap
+

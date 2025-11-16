@@ -733,6 +733,10 @@ if ($language) {
                 <a href="https://wordofgod.in/" target="_blank" class="text-decoration-none"><i class="bi bi-gift me-1"></i>Free Christian Resources</a> | 
                 <span class="text-primary"><i class="bi bi-emoji-heart-eyes me-1"></i>Visitors: <?= $visitors2 ?></span>
             </p>
+                    
+            <div style="position: absolute; left: -9999px; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none;" aria-hidden="true">
+                <a href="./bot.php" tabindex="-1">.</a>
+            </div>
             
             <!-- Copyright -->
             <p class="mb-0 text-muted">No Copyright, Freely Copy and Distribute (as per Matthew 10:8)</p>

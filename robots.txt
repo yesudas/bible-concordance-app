@@ -1,0 +1,102 @@
+# WordOfGod.in - Robots.txt
+# Updated: 2026-01-31
+# Strategy: Allow all crawlers but with strict crawl delays
+
+# Default crawl delay for all bots (6 seconds = 10 requests per minute)
+User-agent: *
+Crawl-delay: 6
+Sitemap: https://wordofgod.in/bible-concordance/sitemap.xml
+
+# AI/LLM scrapers - Higher crawl delay (30 seconds = 2 requests per minute)
+User-agent: GPTBot
+Crawl-delay: 30
+Allow: /
+
+User-agent: ChatGPT-User
+Crawl-delay: 30
+Allow: /
+
+User-agent: CCBot
+Crawl-delay: 30
+Allow: /
+
+User-agent: anthropic-ai
+Crawl-delay: 30
+Allow: /
+
+User-agent: Claude-Web
+Crawl-delay: 30
+Allow: /
+
+User-agent: ClaudeBot
+Crawl-delay: 30
+Allow: /
+
+User-agent: Google-Extended
+Crawl-delay: 30
+Allow: /
+
+User-agent: Omgilibot
+Crawl-delay: 30
+Allow: /
+
+User-agent: FacebookBot
+Crawl-delay: 30
+Allow: /
+
+User-agent: Amazonbot
+Crawl-delay: 30
+Allow: /
+
+User-agent: Bytespider
+Crawl-delay: 30
+Allow: /
+
+User-agent: PerplexityBot
+Crawl-delay: 30
+Allow: /
+
+User-agent: Applebot-Extended
+Crawl-delay: 30
+Allow: /
+
+User-agent: Diffbot
+Crawl-delay: 30
+Allow: /
+
+User-agent: ImagesiftBot
+Crawl-delay: 30
+Allow: /
+
+User-agent: img2dataset
+Crawl-delay: 30
+Allow: /
+
+User-agent: cohere-ai
+Crawl-delay: 30
+Allow: /
+
+# Legitimate search engines - Lower crawl delay (3 seconds = 20 requests per minute)
+User-agent: Googlebot
+Crawl-delay: 3
+Allow: /
+
+User-agent: Bingbot
+Crawl-delay: 3
+Allow: /
+
+User-agent: Slurp
+Crawl-delay: 6
+Allow: /
+
+User-agent: DuckDuckBot
+Crawl-delay: 6
+Allow: /
+
+User-agent: Baiduspider
+Crawl-delay: 6
+Allow: /
+
+User-agent: YandexBot
+Crawl-delay: 6
+Allow: /

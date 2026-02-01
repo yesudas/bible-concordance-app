@@ -4,7 +4,7 @@ include 'counter.php';
 
 $version = "2025.08";
 
-require_once __DIR__ . 'rate-limiter.php';
+require_once __DIR__ . '/rate-limiter.php';
 $rateLimiter = new CrawlerRateLimiter();
 $rateLimiter->checkRateLimit();
 

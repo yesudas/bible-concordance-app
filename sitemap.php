@@ -19,7 +19,8 @@ if (!$isCli) {
 
 $baseUrl = 'https://www.wordofgod.in/bible-concordance/';
 $maxUrlsPerSitemap = 10000;
-$currentDate = date('Y-m-d');
+// $currentDate = date('Y-m-d');
+$currentDate = '2026-01-31';
 
 // Helper function to output text that works in both CLI and browser
 function output($text) {
@@ -144,7 +145,7 @@ class SitemapGenerator {
     private $sitemapFiles = [];
     private $totalUrls = 0;
     
-    public function addUrl($url, $changefreq = 'monthly', $priority = '0.5') {
+    public function addUrl($url, $changefreq = 'yearly', $priority = '0.5') {
         global $maxUrlsPerSitemap;
         
         $this->currentUrls[] = [
@@ -239,6 +240,7 @@ $startTime = microtime(true);
 
 $generator = new SitemapGenerator();
 
+
 // 1. Home page
 $generator->addUrl(buildSitemapUrl(), 'daily', '1.0');
 output("Added home page URL\n");
@@ -250,7 +252,7 @@ output("Found " . count($languages) . " languages\n");
 foreach ($languages as $language) {
     try {
         // Language page
-        $generator->addUrl(buildSitemapUrl(['lang' => $language]), 'weekly', '0.9');
+        $generator->addUrl(buildSitemapUrl(['lang' => $language]), 'yearly', '0.9');
         
         // 3. Bible pages for this language
         $bibles = getBibles($language);
@@ -259,7 +261,7 @@ foreach ($languages as $language) {
         foreach ($bibles as $bible) {
             try {
                 // Bible page
-                $generator->addUrl(buildSitemapUrl(['lang' => $language, 'bible' => $bible]), 'weekly', '0.8');
+                $generator->addUrl(buildSitemapUrl(['lang' => $language, 'bible' => $bible]), 'yearly', '0.8');
                 
                 // 4. Letter pages for this bible
                 $letters = getLetters($language, $bible);
@@ -268,7 +270,7 @@ foreach ($languages as $language) {
                 foreach ($letters as $letter) {
                     try {
                         // Letter page
-                        $generator->addUrl(buildSitemapUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letter]), 'monthly', '0.7');
+                        $generator->addUrl(buildSitemapUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letter]), 'yearly', '0.7');
                         
                         // 5. Word pages for this letter
                         $words = getWords($language, $bible, $letter);
@@ -276,7 +278,7 @@ foreach ($languages as $language) {
                         
                         foreach ($words as $word) {
                             // Word page (verses view)
-                            $generator->addUrl(buildSitemapUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letter, 'word' => $word]), 'monthly', '0.6');
+                            $generator->addUrl(buildSitemapUrl(['lang' => $language, 'bible' => $bible, 'letter' => $letter, 'word' => $word]), 'yearly', '0.6');
                         }
                         
                     } catch (Exception $e) {
